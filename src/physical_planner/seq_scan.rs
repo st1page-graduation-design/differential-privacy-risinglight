@@ -2,7 +2,7 @@ use itertools::Itertools;
 
 use super::*;
 use crate::catalog::TableRefId;
-use crate::logical_planner::LogicalSeqScan;
+use crate::logical_planner::LogicalGet;
 use crate::types::ColumnId;
 
 /// The physical plan of sequential scan operation.
@@ -15,10 +15,10 @@ pub struct PhysicalSeqScan {
 }
 
 impl PhysicalPlaner {
-    pub fn plan_seq_scan(&self, plan: LogicalSeqScan) -> Result<PhysicalPlan, PhysicalPlanError> {
+    pub fn plan_get(&self, plan: &LogicalGet) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::SeqScan(PhysicalSeqScan {
             table_ref_id: plan.table_ref_id,
-            column_ids: plan.column_ids,
+            column_ids: plan.column_ids.clone(),
             with_row_handler: plan.with_row_handler,
             is_sorted: plan.is_sorted,
         }))

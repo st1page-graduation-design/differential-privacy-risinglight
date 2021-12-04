@@ -10,11 +10,11 @@ pub struct PhysicalLimit {
 }
 
 impl PhysicalPlaner {
-    pub fn plan_limit(&self, plan: LogicalLimit) -> Result<PhysicalPlan, PhysicalPlanError> {
+    pub fn plan_limit(&self, plan: &LogicalLimit) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::Limit(PhysicalLimit {
             offset: plan.offset,
             limit: plan.limit,
-            child: self.plan_inner(plan.child.as_ref().clone())?.into(),
+            child: self.plan_inner(&plan.child)?.into(),
         }))
     }
 }

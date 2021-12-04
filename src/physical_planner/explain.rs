@@ -9,9 +9,9 @@ pub struct PhysicalExplain {
 }
 
 impl PhysicalPlaner {
-    pub fn plan_explain(&self, plan: LogicalExplain) -> Result<PhysicalPlan, PhysicalPlanError> {
+    pub fn plan_explain(&self, plan: &LogicalExplain) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::Explain(PhysicalExplain {
-            plan: (self.plan_inner(plan.plan.as_ref().clone())?.into()),
+            plan: (self.plan_inner(&plan.child)?.into()),
         }))
     }
 }

@@ -19,15 +19,11 @@ pub struct PhysicalJoin {
 /// Currently, we only use default join ordering.
 /// We will implement DP or DFS algorithms for join orders.
 impl PhysicalPlaner {
-    pub fn plan_join(&self, logical_join: LogicalJoin) -> Result<PhysicalPlan, PhysicalPlanError> {
+    pub fn plan_join(&self, logical_join: &LogicalJoin) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::Join(PhysicalJoin {
             join_type: PhysicalJoinType::NestedLoop,
-            left_plan: self
-                .plan_inner(logical_join.left_plan.as_ref().clone())?
-                .into(),
-            right_plan: self
-                .plan_inner(logical_join.right_plan.as_ref().clone())?
-                .into(),
+            left_plan: self.plan_inner(&logical_join.left_plan)?.into(),
+            right_plan: self.plan_inner(&logical_join.right_plan)?.into(),
             join_op: logical_join.join_op.clone(),
         }))
     }

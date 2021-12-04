@@ -22,21 +22,21 @@ impl PlanRewriter for ConstantMovingRule {
                         (Plus, other, Constant(lval)) | (Plus, Constant(lval), other) => {
                             BinaryOp(BoundBinaryOp {
                                 op: op.op.clone(),
-                                left_expr: Box::new(other.clone()),
-                                right_expr: Box::new(Constant(rval - lval)),
+                                left_expr: other.clone().into(),
+                                right_expr: Constant(rval - lval).into(),
                                 return_type: op.return_type.clone(),
                             })
                         }
                         (Minus, other, Constant(lval)) => BinaryOp(BoundBinaryOp {
                             op: op.op.clone(),
-                            left_expr: Box::new(other.clone()),
-                            right_expr: Box::new(Constant(rval + lval)),
+                            left_expr: other.clone().into(),
+                            right_expr: Constant(rval + lval).into(),
                             return_type: op.return_type.clone(),
                         }),
                         (Minus, Constant(lval), other) => BinaryOp(BoundBinaryOp {
                             op: op.op.clone(),
-                            left_expr: Box::new(Constant(lval - rval)),
-                            right_expr: Box::new(other.clone()),
+                            left_expr: Constant(lval - rval).into(),
+                            right_expr: other.clone().into(),
                             return_type: op.return_type.clone(),
                         }),
                         (Multiply, other, Constant(lval)) | (Multiply, Constant(lval), other)
@@ -45,8 +45,8 @@ impl PlanRewriter for ConstantMovingRule {
                             BinaryOp(BoundBinaryOp {
                                 // TODO: flip op when lval is negative
                                 op: op.op.clone(),
-                                left_expr: Box::new(other.clone()),
-                                right_expr: Box::new(Constant(rval / lval)),
+                                left_expr: other.clone().into(),
+                                right_expr: Constant(rval / lval).into(),
                                 return_type: op.return_type.clone(),
                             })
                         }

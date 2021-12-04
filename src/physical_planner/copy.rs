@@ -33,24 +33,24 @@ pub struct PhysicalCopyToFile {
 impl PhysicalPlaner {
     pub fn plan_copy_from_file(
         &self,
-        plan: LogicalCopyFromFile,
+        plan: &LogicalCopyFromFile,
     ) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::CopyFromFile(PhysicalCopyFromFile {
-            path: plan.path,
-            format: plan.format,
-            column_types: plan.column_types,
+            path: plan.path.clone(),
+            format: plan.format.clone(),
+            column_types: plan.column_types.clone(),
         }))
     }
 
     pub fn plan_copy_to_file(
         &self,
-        plan: LogicalCopyToFile,
+        plan: &LogicalCopyToFile,
     ) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::CopyToFile(PhysicalCopyToFile {
-            path: plan.path,
-            format: plan.format,
-            column_types: plan.column_types,
-            child: self.plan_inner(plan.child.as_ref().clone())?.into(),
+            path: plan.path.clone(),
+            format: plan.format.clone(),
+            column_types: plan.column_types.clone(),
+            child: self.plan_inner(&plan.child)?.into(),
         }))
     }
 }

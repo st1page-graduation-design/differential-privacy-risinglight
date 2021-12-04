@@ -10,10 +10,10 @@ pub struct PhysicalDelete {
 }
 
 impl PhysicalPlaner {
-    pub fn plan_delete(&self, plan: LogicalDelete) -> Result<PhysicalPlan, PhysicalPlanError> {
+    pub fn plan_delete(&self, plan: &LogicalDelete) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::Delete(PhysicalDelete {
             table_ref_id: plan.table_ref_id,
-            child: self.plan_inner(plan.child.as_ref().clone())?.into(),
+            child: self.plan_inner(&plan.child)?.into(),
         }))
     }
 }

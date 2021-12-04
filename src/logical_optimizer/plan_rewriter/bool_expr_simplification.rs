@@ -21,18 +21,18 @@ impl PlanRewriter for BoolExprSimplification {
         let new_expr = self.rewrite_expr(plan.expr.clone());
         match &new_expr {
             Constant(Bool(false) | Null) => Some(
-                LogicalPlan::LogicalFilter(LogicalFilter {
+                LogicalFilter {
                     expr: new_expr,
-                    child: (LogicalPlan::Dummy.into()),
-                })
+                    child: LogicalDummy.into(),
+                }
                 .into(),
             ),
-            Constant(Bool(true)) => Some(self.rewrite_plan(plan.get_child())),
+            Constant(Bool(true)) => Some(self.rewrite_plan(plan.child.clone())),
             _ => Some(
-                LogicalPlan::LogicalFilter(LogicalFilter {
+                LogicalFilter {
                     expr: new_expr,
-                    child: self.rewrite_plan(plan.get_child()),
-                })
+                    child: self.rewrite_plan(plan.child.clone()),
+                }
                 .into(),
             ),
         }

@@ -20,18 +20,18 @@ pub struct PhysicalHashAgg {
 impl PhysicalPlaner {
     pub fn plan_aggregate(
         &self,
-        plan: LogicalAggregate,
+        plan: &LogicalAggregate,
     ) -> Result<PhysicalPlan, PhysicalPlanError> {
         if plan.group_keys.is_empty() {
             Ok(PhysicalPlan::SimpleAgg(PhysicalSimpleAgg {
-                agg_calls: plan.agg_calls,
-                child: self.plan_inner(plan.child.as_ref().clone())?.into(),
+                agg_calls: plan.agg_calls.clone(),
+                child: self.plan_inner(&plan.child)?.into(),
             }))
         } else {
             Ok(PhysicalPlan::HashAgg(PhysicalHashAgg {
-                agg_calls: plan.agg_calls,
-                group_keys: plan.group_keys,
-                child: self.plan_inner(plan.child.as_ref().clone())?.into(),
+                agg_calls: plan.agg_calls.clone(),
+                group_keys: plan.group_keys.clone(),
+                child: self.plan_inner(&plan.child)?.into(),
             }))
         }
     }

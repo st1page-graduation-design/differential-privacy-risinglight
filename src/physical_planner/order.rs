@@ -9,10 +9,10 @@ pub struct PhysicalOrder {
 }
 
 impl PhysicalPlaner {
-    pub fn plan_order(&self, plan: LogicalOrder) -> Result<PhysicalPlan, PhysicalPlanError> {
+    pub fn plan_order(&self, plan: &LogicalOrder) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::Order(PhysicalOrder {
-            comparators: plan.comparators,
-            child: self.plan_inner(plan.child.as_ref().clone())?.into(),
+            comparators: plan.comparators.clone(),
+            child: self.plan_inner(&plan.child)?.into(),
         }))
     }
 }

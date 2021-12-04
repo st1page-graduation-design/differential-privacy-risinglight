@@ -9,10 +9,10 @@ pub struct PhysicalFilter {
 }
 
 impl PhysicalPlaner {
-    pub fn plan_filter(&self, plan: LogicalFilter) -> Result<PhysicalPlan, PhysicalPlanError> {
+    pub fn plan_filter(&self, plan: &LogicalFilter) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::Filter(PhysicalFilter {
-            expr: plan.expr,
-            child: self.plan_inner(plan.child.as_ref().clone())?.into(),
+            expr: plan.expr.clone(),
+            child: self.plan_inner(&plan.child)?.into(),
         }))
     }
 }

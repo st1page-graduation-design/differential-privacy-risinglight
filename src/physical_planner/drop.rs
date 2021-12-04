@@ -8,9 +8,9 @@ pub struct PhysicalDrop {
 }
 
 impl PhysicalPlaner {
-    pub fn plan_drop(&self, plan: LogicalDrop) -> Result<PhysicalPlan, PhysicalPlanError> {
+    pub fn plan_drop(&self, plan: &LogicalDrop) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::Drop(PhysicalDrop {
-            object: plan.object,
+            object: plan.object.clone(),
         }))
     }
 }

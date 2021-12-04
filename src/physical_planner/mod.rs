@@ -28,7 +28,10 @@ pub use order::*;
 pub use projection::*;
 pub use seq_scan::*;
 
-use crate::{logical_optimizer::plan_rewriter::PlanRewriter, logical_planner::LogicalPlan};
+use crate::{
+    logical_optimizer::PlanRewriter,
+    logical_planner::{LogicalPlan, LogicalPlanRef},
+};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum PhysicalPlanError {
@@ -64,15 +67,15 @@ pub enum PhysicalPlan {
 pub struct PhysicalPlaner;
 
 impl PhysicalPlaner {
-    fn plan_inner(&self, plan: LogicalPlan) -> Result<PhysicalPlan, PhysicalPlanError> {
+    fn plan_inner(&self, plan: &LogicalPlan) -> Result<PhysicalPlan, PhysicalPlanError> {
         match plan {
-            LogicalPlan::Dummy => Ok(PhysicalPlan::Dummy(Dummy)),
+            LogicalPlan::LogicalDummy(_) => Ok(PhysicalPlan::Dummy(Dummy)),
             LogicalPlan::LogicalCreateTable(plan) => self.plan_create_table(plan),
             LogicalPlan::LogicalDrop(plan) => self.plan_drop(plan),
             LogicalPlan::LogicalInsert(plan) => self.plan_insert(plan),
             LogicalPlan::LogicalValues(plan) => self.plan_values(plan),
             LogicalPlan::LogicalJoin(plan) => self.plan_join(plan),
-            LogicalPlan::LogicalSeqScan(plan) => self.plan_seq_scan(plan),
+            LogicalPlan::LogicalGet(plan) => self.plan_get(plan),
             LogicalPlan::LogicalProjection(plan) => self.plan_projection(plan),
             LogicalPlan::LogicalFilter(plan) => self.plan_filter(plan),
             LogicalPlan::LogicalOrder(plan) => self.plan_order(plan),
@@ -85,12 +88,12 @@ impl PhysicalPlaner {
         }
     }
 
-    pub fn plan(&self, plan: LogicalPlan) -> Result<PhysicalPlan, PhysicalPlanError> {
+    pub fn plan(&self, plan: LogicalPlanRef) -> Result<PhysicalPlan, PhysicalPlanError> {
         // Resolve input reference
-        let plan = InputRefResolver::default().rewrite_plan(plan.into());
+        let plan = InputRefResolver::default().rewrite_plan(plan);
 
         // Create physical plan
-        self.plan_inner(plan.as_ref().clone())
+        self.plan_inner(&plan)
     }
 }
 

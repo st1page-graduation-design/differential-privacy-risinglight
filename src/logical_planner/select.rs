@@ -2,16 +2,100 @@
 //!
 //! A `select` statement will be planned to a compose of:
 //!
-//! - [`LogicalSeqScan`] (from *) or dummy plan (no from)
+//! - [`LogicalGet`] (from *) or [`LogicalDummy`] (no from)
+//! - [`LogicalJoin`] (from * join *)
 //! - [`LogicalFilter`] (where *)
 //! - [`LogicalProjection`] (select *)
+//! - [`LogicalAggregate`] (count(*))
 //! - [`LogicalOrder`] (order by *)
+//! - [`LogicalLimit`] (limit *)
+
 use super::*;
-use crate::binder::{BoundAggCall, BoundExpr, BoundInputRef, BoundSelect, BoundTableRef};
+use crate::{
+    binder::{
+        BoundAggCall, BoundExpr, BoundInputRef, BoundJoinOperator, BoundOrderBy, BoundSelect,
+        BoundTableRef,
+    },
+    catalog::TableRefId,
+    types::ColumnId,
+};
+
+/// The logical plan of dummy get.
+#[derive(Debug, Clone)]
+pub struct LogicalDummy;
+
+/// The logical plan of get.
+#[derive(Debug, Clone)]
+pub struct LogicalGet {
+    pub table_ref_id: TableRefId,
+    pub column_ids: Vec<ColumnId>,
+    pub with_row_handler: bool,
+    pub is_sorted: bool,
+}
+
+/// The logical plan of join, it only records join tables and operators.
+/// The query optimizer should decide the join orders and specific algorithms (hash join, nested
+/// loop join or index join).
+#[derive(Debug, Clone)]
+pub struct LogicalJoin {
+    pub left_plan: LogicalPlanRef,
+    pub right_plan: LogicalPlanRef,
+    pub join_op: BoundJoinOperator,
+}
+
+/// The logical plan of filter operation.
+#[derive(Debug, Clone)]
+pub struct LogicalFilter {
+    pub expr: BoundExpr,
+    pub child: LogicalPlanRef,
+}
+
+/// The logical plan of project operation.
+#[derive(Debug, Clone)]
+pub struct LogicalProjection {
+    pub project_expressions: Vec<BoundExpr>,
+    pub child: LogicalPlanRef,
+}
+
+/// The logical plan of hash aggregate operation.
+#[derive(Debug, Clone)]
+pub struct LogicalAggregate {
+    pub agg_calls: Vec<BoundAggCall>,
+    /// Group keys in hash aggregation (optional)
+    pub group_keys: Vec<BoundExpr>,
+    pub child: LogicalPlanRef,
+}
+
+/// The logical plan of order.
+#[derive(Debug, Clone)]
+pub struct LogicalOrder {
+    pub comparators: Vec<BoundOrderBy>,
+    pub child: LogicalPlanRef,
+}
+
+/// The logical plan of limit operation.
+#[derive(Debug, Clone)]
+pub struct LogicalLimit {
+    pub offset: usize,
+    pub limit: usize,
+    pub child: LogicalPlanRef,
+}
+
+impl_logical_plan!(LogicalDummy);
+impl_logical_plan!(LogicalGet);
+impl_logical_plan!(LogicalJoin, [left_plan, right_plan]);
+impl_logical_plan!(LogicalFilter, [child]);
+impl_logical_plan!(LogicalProjection, [child]);
+impl_logical_plan!(LogicalAggregate, [child]);
+impl_logical_plan!(LogicalOrder, [child]);
+impl_logical_plan!(LogicalLimit, [child]);
 
 impl LogicalPlaner {
-    pub fn plan_select(&self, mut stmt: Box<BoundSelect>) -> Result<LogicalPlan, LogicalPlanError> {
-        let mut plan = LogicalPlan::Dummy;
+    pub fn plan_select(
+        &self,
+        mut stmt: Box<BoundSelect>,
+    ) -> Result<LogicalPlanRef, LogicalPlanError> {
+        let mut plan: LogicalPlanRef = LogicalDummy.into();
         let mut is_sorted = false;
 
         if let Some(table_ref) = stmt.from_table.get(0) {
@@ -27,10 +111,7 @@ impl LogicalPlaner {
         }
 
         if let Some(expr) = stmt.where_clause {
-            plan = LogicalPlan::LogicalFilter(LogicalFilter {
-                expr,
-                child: plan.into(),
-            });
+            plan = LogicalFilter { expr, child: plan }.into();
         }
 
         let mut agg_extractor = AggExtractor::new(stmt.group_by.len());
@@ -38,27 +119,30 @@ impl LogicalPlaner {
             agg_extractor.visit_expr(expr);
         }
         if !agg_extractor.agg_calls.is_empty() {
-            plan = LogicalPlan::LogicalAggregate(LogicalAggregate {
+            plan = LogicalAggregate {
                 agg_calls: agg_extractor.agg_calls,
                 group_keys: stmt.group_by,
-                child: plan.into(),
-            })
+                child: plan,
+            }
+            .into();
         }
 
         // TODO: support the following clauses
         assert!(!stmt.select_distinct, "TODO: plan distinct");
 
         if !stmt.select_list.is_empty() {
-            plan = LogicalPlan::LogicalProjection(LogicalProjection {
+            plan = LogicalProjection {
                 project_expressions: stmt.select_list,
-                child: plan.into(),
-            });
+                child: plan,
+            }
+            .into();
         }
         if !stmt.orderby.is_empty() && !is_sorted {
-            plan = LogicalPlan::LogicalOrder(LogicalOrder {
+            plan = LogicalOrder {
                 comparators: stmt.orderby,
-                child: plan.into(),
-            });
+                child: plan,
+            }
+            .into();
         }
         if stmt.limit.is_some() || stmt.offset.is_some() {
             let limit = match stmt.limit {
@@ -75,15 +159,12 @@ impl LogicalPlaner {
                 },
                 None => 0,
             };
-            plan = LogicalPlan::LogicalLimit(LogicalLimit {
+            plan = LogicalLimit {
                 offset,
                 limit,
-                child: plan.into(),
-            });
-        }
-
-        if plan == LogicalPlan::Dummy {
-            return Err(LogicalPlanError::InvalidSQL);
+                child: plan,
+            }
+            .into();
         }
         Ok(plan)
     }
@@ -93,18 +174,19 @@ impl LogicalPlaner {
         table_ref: &BoundTableRef,
         with_row_handler: bool,
         is_sorted: bool,
-    ) -> Result<LogicalPlan, LogicalPlanError> {
+    ) -> Result<LogicalPlanRef, LogicalPlanError> {
         match table_ref {
             BoundTableRef::BaseTableRef {
                 ref_id,
                 table_name: _,
                 column_ids,
-            } => Ok(LogicalPlan::LogicalSeqScan(LogicalSeqScan {
+            } => Ok(LogicalGet {
                 table_ref_id: *ref_id,
                 column_ids: column_ids.to_vec(),
                 with_row_handler,
                 is_sorted,
-            })),
+            }
+            .into()),
             BoundTableRef::JoinTableRef {
                 relation,
                 join_tables,
@@ -113,11 +195,12 @@ impl LogicalPlaner {
                 for join_table in join_tables.iter() {
                     let table_plan =
                         self.plan_table_ref(&join_table.table_ref, with_row_handler, is_sorted)?;
-                    plan = LogicalPlan::LogicalJoin(LogicalJoin {
-                        left_plan: plan.into(),
-                        right_plan: table_plan.into(),
+                    plan = LogicalJoin {
+                        left_plan: plan,
+                        right_plan: table_plan,
                         join_op: join_table.join_op.clone(),
-                    });
+                    }
+                    .into();
                 }
                 Ok(plan)
             }
@@ -166,7 +249,8 @@ impl AggExtractor {
             }
             UnaryOp(unary_op) => self.visit_expr(&mut unary_op.expr),
             TypeCast(type_cast) => self.visit_expr(&mut type_cast.expr),
-            Constant(_) | ColumnRef(_) | InputRef(_) | IsNull(_) => {}
+            IsNull(is_null) => self.visit_expr(&mut is_null.expr),
+            Constant(_) | ColumnRef(_) | InputRef(_) => {}
         }
     }
 }

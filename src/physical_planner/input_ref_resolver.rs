@@ -1,7 +1,6 @@
 use crate::binder::*;
 use crate::catalog::ColumnRefId;
-use crate::logical_optimizer::plan_node::UnaryLogicalPlanNode;
-use crate::logical_optimizer::plan_rewriter::PlanRewriter;
+use crate::logical_optimizer::PlanRewriter;
 use crate::logical_planner::*;
 
 /// Resolves column references into physical indices into the `DataChunk`.
@@ -28,7 +27,7 @@ impl PlanRewriter for InputRefResolver {
         self.bindings.append(&mut resolver.bindings);
 
         Some(
-            LogicalPlan::LogicalJoin(LogicalJoin {
+            LogicalJoin {
                 left_plan,
                 right_plan,
                 join_op: match plan.join_op.clone() {
@@ -36,12 +35,12 @@ impl PlanRewriter for InputRefResolver {
                     LeftOuter(On(expr)) => LeftOuter(On(self.rewrite_expr(expr))),
                     RightOuter(On(expr)) => RightOuter(On(self.rewrite_expr(expr))),
                 },
-            })
+            }
             .into(),
         )
     }
 
-    fn rewrite_seqscan(&mut self, plan: &LogicalSeqScan) -> Option<LogicalPlanRef> {
+    fn rewrite_get(&mut self, plan: &LogicalGet) -> Option<LogicalPlanRef> {
         self.bindings = plan
             .column_ids
             .iter()
@@ -51,7 +50,7 @@ impl PlanRewriter for InputRefResolver {
     }
 
     fn rewrite_projection(&mut self, plan: &LogicalProjection) -> Option<LogicalPlanRef> {
-        let child = self.rewrite_plan(plan.get_child());
+        let child = self.rewrite_plan(plan.child.clone());
         let mut bindings = vec![];
         let project_expressions = plan
             .project_expressions
@@ -67,16 +66,16 @@ impl PlanRewriter for InputRefResolver {
             .collect();
         self.bindings = bindings;
         Some(
-            LogicalPlan::LogicalProjection(LogicalProjection {
+            LogicalProjection {
                 project_expressions,
                 child,
-            })
+            }
             .into(),
         )
     }
 
     fn rewrite_aggregate(&mut self, plan: &LogicalAggregate) -> Option<LogicalPlanRef> {
-        let child = self.rewrite_plan(plan.get_child());
+        let child = self.rewrite_plan(plan.child.clone());
 
         let agg_calls = plan
             .agg_calls
@@ -106,11 +105,11 @@ impl PlanRewriter for InputRefResolver {
             })
             .collect();
         Some(
-            LogicalPlan::LogicalAggregate(LogicalAggregate {
+            LogicalAggregate {
                 agg_calls,
                 group_keys,
                 child,
-            })
+            }
             .into(),
         )
     }

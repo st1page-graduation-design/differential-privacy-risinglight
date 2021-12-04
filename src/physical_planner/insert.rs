@@ -22,18 +22,18 @@ pub struct PhysicalValues {
 }
 
 impl PhysicalPlaner {
-    pub fn plan_insert(&self, plan: LogicalInsert) -> Result<PhysicalPlan, PhysicalPlanError> {
+    pub fn plan_insert(&self, plan: &LogicalInsert) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::Insert(PhysicalInsert {
             table_ref_id: plan.table_ref_id,
-            column_ids: plan.column_ids,
-            child: self.plan_inner(plan.child.as_ref().clone())?.into(),
+            column_ids: plan.column_ids.clone(),
+            child: self.plan_inner(&plan.child)?.into(),
         }))
     }
 
-    pub fn plan_values(&self, plan: LogicalValues) -> Result<PhysicalPlan, PhysicalPlanError> {
+    pub fn plan_values(&self, plan: &LogicalValues) -> Result<PhysicalPlan, PhysicalPlanError> {
         Ok(PhysicalPlan::Values(PhysicalValues {
-            column_types: plan.column_types,
-            values: plan.values,
+            column_types: plan.column_types.clone(),
+            values: plan.values.clone(),
         }))
     }
 }
