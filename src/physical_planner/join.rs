@@ -20,16 +20,17 @@ pub struct PhysicalJoin {
 /// We will implement DP or DFS algorithms for join orders.
 impl PhysicalPlaner {
     pub fn plan_join(&self, logical_join: &LogicalJoin) -> Result<PhysicalPlan, PhysicalPlanError> {
-        Ok(PhysicalPlan::Join(PhysicalJoin {
+        Ok(PhysicalJoin {
             join_type: PhysicalJoinType::NestedLoop,
             left_plan: self.plan_inner(&logical_join.left_plan)?.into(),
             right_plan: self.plan_inner(&logical_join.right_plan)?.into(),
             join_op: logical_join.join_op.clone(),
-        }))
+        }
+        .into())
     }
 }
 
-impl PlanExplainable for PhysicalJoin {
+impl Explain for PhysicalJoin {
     fn explain_inner(&self, level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Join: type {:?}, op {:?}", self.join_type, self.join_op)?;
         self.left_plan.explain(level + 1, f)?;

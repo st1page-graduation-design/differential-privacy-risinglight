@@ -1,8 +1,15 @@
+use crate::{
+    logical_optimizer::PlanRewriter,
+    logical_planner::{LogicalPlan, LogicalPlanRef},
+};
+use enum_dispatch::enum_dispatch;
+
 mod aggregate;
 mod copy;
 mod create;
 mod delete;
 mod drop;
+mod dummy;
 mod explain;
 mod filter;
 mod input_ref_resolver;
@@ -18,6 +25,7 @@ pub use copy::*;
 pub use create::*;
 pub use delete::*;
 pub use drop::*;
+pub use dummy::*;
 pub use explain::*;
 pub use filter::*;
 pub use input_ref_resolver::*;
@@ -28,39 +36,32 @@ pub use order::*;
 pub use projection::*;
 pub use seq_scan::*;
 
-use crate::{
-    logical_optimizer::PlanRewriter,
-    logical_planner::{LogicalPlan, LogicalPlanRef},
-};
-
 #[derive(thiserror::Error, Debug, PartialEq)]
 pub enum PhysicalPlanError {
     #[error("invalid SQL")]
     InvalidLogicalPlan,
 }
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Dummy;
-
+#[enum_dispatch(Explain)]
 #[derive(Debug, PartialEq, Clone)]
 pub enum PhysicalPlan {
-    Dummy(Dummy),
-    SeqScan(PhysicalSeqScan),
-    Insert(PhysicalInsert),
-    Values(PhysicalValues),
-    CreateTable(PhysicalCreateTable),
-    Drop(PhysicalDrop),
-    Projection(PhysicalProjection),
-    Filter(PhysicalFilter),
-    Explain(PhysicalExplain),
-    Join(PhysicalJoin),
-    SimpleAgg(PhysicalSimpleAgg),
-    HashAgg(PhysicalHashAgg),
-    Order(PhysicalOrder),
-    Limit(PhysicalLimit),
-    Delete(PhysicalDelete),
-    CopyFromFile(PhysicalCopyFromFile),
-    CopyToFile(PhysicalCopyToFile),
+    PhysicalDummy,
+    PhysicalSeqScan,
+    PhysicalInsert,
+    PhysicalValues,
+    PhysicalCreateTable,
+    PhysicalDrop,
+    PhysicalProjection,
+    PhysicalFilter,
+    PhysicalExplain,
+    PhysicalJoin,
+    PhysicalSimpleAgg,
+    PhysicalHashAgg,
+    PhysicalOrder,
+    PhysicalLimit,
+    PhysicalDelete,
+    PhysicalCopyFromFile,
+    PhysicalCopyToFile,
 }
 
 #[derive(Default)]
@@ -69,7 +70,7 @@ pub struct PhysicalPlaner;
 impl PhysicalPlaner {
     fn plan_inner(&self, plan: &LogicalPlan) -> Result<PhysicalPlan, PhysicalPlanError> {
         match plan {
-            LogicalPlan::LogicalDummy(_) => Ok(PhysicalPlan::Dummy(Dummy)),
+            LogicalPlan::LogicalDummy(plan) => self.plan_dummy(plan),
             LogicalPlan::LogicalCreateTable(plan) => self.plan_create_table(plan),
             LogicalPlan::LogicalDrop(plan) => self.plan_drop(plan),
             LogicalPlan::LogicalInsert(plan) => self.plan_insert(plan),
@@ -97,42 +98,13 @@ impl PhysicalPlaner {
     }
 }
 
-pub trait PlanExplainable {
+#[enum_dispatch]
+pub trait Explain {
     fn explain_inner(&self, level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result;
 
     fn explain(&self, level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", " ".repeat(level * 2))?;
         self.explain_inner(level, f)
-    }
-}
-
-impl PlanExplainable for Dummy {
-    fn explain_inner(&self, _level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(f, "Dummy")
-    }
-}
-
-impl PhysicalPlan {
-    fn explain(&self, level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Dummy(p) => p.explain(level, f),
-            Self::SeqScan(p) => p.explain(level, f),
-            Self::Insert(p) => p.explain(level, f),
-            Self::Values(p) => p.explain(level, f),
-            Self::CreateTable(p) => p.explain(level, f),
-            Self::Drop(p) => p.explain(level, f),
-            Self::Projection(p) => p.explain(level, f),
-            Self::Filter(p) => p.explain(level, f),
-            Self::Explain(p) => p.explain(level, f),
-            Self::Join(p) => p.explain(level, f),
-            Self::Order(p) => p.explain(level, f),
-            Self::Limit(p) => p.explain(level, f),
-            Self::SimpleAgg(p) => p.explain(level, f),
-            Self::HashAgg(p) => p.explain(level, f),
-            Self::Delete(p) => p.explain(level, f),
-            Self::CopyFromFile(p) => p.explain(level, f),
-            Self::CopyToFile(p) => p.explain(level, f),
-        }
     }
 }
 

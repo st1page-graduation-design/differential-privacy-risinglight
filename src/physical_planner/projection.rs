@@ -13,14 +13,15 @@ impl PhysicalPlaner {
         &self,
         plan: &LogicalProjection,
     ) -> Result<PhysicalPlan, PhysicalPlanError> {
-        Ok(PhysicalPlan::Projection(PhysicalProjection {
+        Ok(PhysicalProjection {
             project_expressions: plan.project_expressions.clone(),
             child: self.plan_inner(&plan.child)?.into(),
-        }))
+        }
+        .into())
     }
 }
 
-impl PlanExplainable for PhysicalProjection {
+impl Explain for PhysicalProjection {
     fn explain_inner(&self, level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Projection: exprs {:?}", self.project_expressions)?;
         self.child.explain(level + 1, f)

@@ -23,28 +23,30 @@ impl PhysicalPlaner {
         plan: &LogicalAggregate,
     ) -> Result<PhysicalPlan, PhysicalPlanError> {
         if plan.group_keys.is_empty() {
-            Ok(PhysicalPlan::SimpleAgg(PhysicalSimpleAgg {
+            Ok(PhysicalSimpleAgg {
                 agg_calls: plan.agg_calls.clone(),
                 child: self.plan_inner(&plan.child)?.into(),
-            }))
+            }
+            .into())
         } else {
-            Ok(PhysicalPlan::HashAgg(PhysicalHashAgg {
+            Ok(PhysicalHashAgg {
                 agg_calls: plan.agg_calls.clone(),
                 group_keys: plan.group_keys.clone(),
                 child: self.plan_inner(&plan.child)?.into(),
-            }))
+            }
+            .into())
         }
     }
 }
 
-impl PlanExplainable for PhysicalSimpleAgg {
+impl Explain for PhysicalSimpleAgg {
     fn explain_inner(&self, level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "SimpleAgg: {:?}", self.agg_calls)?;
         self.child.explain(level + 1, f)
     }
 }
 
-impl PlanExplainable for PhysicalHashAgg {
+impl Explain for PhysicalHashAgg {
     fn explain_inner(&self, level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "HashAgg: {} agg calls", self.agg_calls.len(),)?;
         self.child.explain(level + 1, f)

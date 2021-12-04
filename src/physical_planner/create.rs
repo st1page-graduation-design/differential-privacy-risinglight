@@ -19,16 +19,17 @@ impl PhysicalPlaner {
         &self,
         plan: &LogicalCreateTable,
     ) -> Result<PhysicalPlan, PhysicalPlanError> {
-        Ok(PhysicalPlan::CreateTable(PhysicalCreateTable {
+        Ok(PhysicalCreateTable {
             database_id: plan.database_id,
             schema_id: plan.schema_id,
             table_name: plan.table_name.clone(),
             columns: plan.columns.clone(),
-        }))
+        }
+        .into())
     }
 }
 
-impl PlanExplainable for PhysicalCreateTable {
+impl Explain for PhysicalCreateTable {
     fn explain_inner(&self, _level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,

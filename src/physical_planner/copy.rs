@@ -35,27 +35,29 @@ impl PhysicalPlaner {
         &self,
         plan: &LogicalCopyFromFile,
     ) -> Result<PhysicalPlan, PhysicalPlanError> {
-        Ok(PhysicalPlan::CopyFromFile(PhysicalCopyFromFile {
+        Ok(PhysicalCopyFromFile {
             path: plan.path.clone(),
             format: plan.format.clone(),
             column_types: plan.column_types.clone(),
-        }))
+        }
+        .into())
     }
 
     pub fn plan_copy_to_file(
         &self,
         plan: &LogicalCopyToFile,
     ) -> Result<PhysicalPlan, PhysicalPlanError> {
-        Ok(PhysicalPlan::CopyToFile(PhysicalCopyToFile {
+        Ok(PhysicalCopyToFile {
             path: plan.path.clone(),
             format: plan.format.clone(),
             column_types: plan.column_types.clone(),
             child: self.plan_inner(&plan.child)?.into(),
-        }))
+        }
+        .into())
     }
 }
 
-impl PlanExplainable for PhysicalCopyFromFile {
+impl Explain for PhysicalCopyFromFile {
     fn explain_inner(&self, _level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
@@ -65,7 +67,7 @@ impl PlanExplainable for PhysicalCopyFromFile {
     }
 }
 
-impl PlanExplainable for PhysicalCopyToFile {
+impl Explain for PhysicalCopyToFile {
     fn explain_inner(&self, level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,

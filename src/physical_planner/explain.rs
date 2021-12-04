@@ -10,13 +10,14 @@ pub struct PhysicalExplain {
 
 impl PhysicalPlaner {
     pub fn plan_explain(&self, plan: &LogicalExplain) -> Result<PhysicalPlan, PhysicalPlanError> {
-        Ok(PhysicalPlan::Explain(PhysicalExplain {
+        Ok(PhysicalExplain {
             plan: (self.plan_inner(&plan.child)?.into()),
-        }))
+        }
+        .into())
     }
 }
 
-impl PlanExplainable for PhysicalExplain {
+impl Explain for PhysicalExplain {
     fn explain_inner(&self, _level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Huh, explain myself?")
     }

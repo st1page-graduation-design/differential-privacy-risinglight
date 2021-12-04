@@ -107,13 +107,12 @@ impl ExecutorBuilder {
 
     /// Build executor from a physical plan with given concrete [`Storage`] type.
     fn build_with_storage(&self, plan: PhysicalPlan, storage: Arc<impl Storage>) -> BoxedExecutor {
+        use PhysicalPlan::*;
         match plan {
-            PhysicalPlan::Dummy(_) => DummyScanExecutor.execute().boxed(),
-            PhysicalPlan::CreateTable(plan) => {
-                CreateTableExecutor { plan, storage }.execute().boxed()
-            }
-            PhysicalPlan::Drop(plan) => DropExecutor { plan, storage }.execute().boxed(),
-            PhysicalPlan::Insert(plan) => InsertExecutor {
+            PhysicalDummy(_) => DummyScanExecutor.execute().boxed(),
+            PhysicalCreateTable(plan) => CreateTableExecutor { plan, storage }.execute().boxed(),
+            PhysicalDrop(plan) => DropExecutor { plan, storage }.execute().boxed(),
+            PhysicalInsert(plan) => InsertExecutor {
                 table_ref_id: plan.table_ref_id,
                 column_ids: plan.column_ids,
                 storage: storage.clone(),
@@ -121,68 +120,68 @@ impl ExecutorBuilder {
             }
             .execute()
             .boxed(),
-            PhysicalPlan::Values(plan) => ValuesExecutor {
+            PhysicalValues(plan) => ValuesExecutor {
                 column_types: plan.column_types,
                 values: plan.values,
             }
             .execute()
             .boxed(),
-            PhysicalPlan::Projection(plan) => ProjectionExecutor {
+            PhysicalProjection(plan) => ProjectionExecutor {
                 project_expressions: plan.project_expressions,
                 child: self.build_with_storage(plan.child.as_ref().clone(), storage),
             }
             .execute()
             .boxed(),
-            PhysicalPlan::SeqScan(plan) => SeqScanExecutor { plan, storage }.execute().boxed(),
-            PhysicalPlan::Filter(plan) => FilterExecutor {
+            PhysicalSeqScan(plan) => SeqScanExecutor { plan, storage }.execute().boxed(),
+            PhysicalFilter(plan) => FilterExecutor {
                 expr: plan.expr,
                 child: self.build_with_storage(plan.child.as_ref().clone(), storage),
             }
             .execute()
             .boxed(),
-            PhysicalPlan::Order(plan) => OrderExecutor {
+            PhysicalOrder(plan) => OrderExecutor {
                 comparators: plan.comparators,
                 child: self.build_with_storage(plan.child.as_ref().clone(), storage),
             }
             .execute()
             .boxed(),
-            PhysicalPlan::Limit(plan) => LimitExecutor {
+            PhysicalLimit(plan) => LimitExecutor {
                 offset: plan.offset,
                 limit: plan.limit,
                 child: self.build_with_storage(plan.child.as_ref().clone(), storage),
             }
             .execute()
             .boxed(),
-            PhysicalPlan::Explain(plan) => ExplainExecutor { plan }.execute().boxed(),
-            PhysicalPlan::Join(plan) => NestedLoopJoinExecutor {
+            PhysicalExplain(plan) => ExplainExecutor { plan }.execute().boxed(),
+            PhysicalJoin(plan) => NestedLoopJoinExecutor {
                 left_child: self.build_with_storage(*plan.left_plan, storage.clone()),
                 right_child: self.build_with_storage(*plan.right_plan, storage),
                 join_op: plan.join_op.clone(),
             }
             .execute()
             .boxed(),
-            PhysicalPlan::SimpleAgg(plan) => SimpleAggExecutor {
+            PhysicalSimpleAgg(plan) => SimpleAggExecutor {
                 agg_calls: plan.agg_calls,
                 child: self.build_with_storage(plan.child.as_ref().clone(), storage),
             }
             .execute()
             .boxed(),
-            PhysicalPlan::HashAgg(plan) => HashAggExecutor {
+            PhysicalHashAgg(plan) => HashAggExecutor {
                 agg_calls: plan.agg_calls,
                 group_keys: plan.group_keys,
                 child: self.build_with_storage(plan.child.as_ref().clone(), storage),
             }
             .execute()
             .boxed(),
-            PhysicalPlan::Delete(plan) => DeleteExecutor {
+            PhysicalDelete(plan) => DeleteExecutor {
                 storage: storage.clone(),
                 child: self.build_with_storage(plan.child.as_ref().clone(), storage),
                 table_ref_id: plan.table_ref_id,
             }
             .execute()
             .boxed(),
-            PhysicalPlan::CopyFromFile(plan) => CopyFromFileExecutor { plan }.execute().boxed(),
-            PhysicalPlan::CopyToFile(plan) => CopyToFileExecutor {
+            PhysicalCopyFromFile(plan) => CopyFromFileExecutor { plan }.execute().boxed(),
+            PhysicalCopyToFile(plan) => CopyToFileExecutor {
                 path: plan.path,
                 format: plan.format,
                 child: self.build_with_storage(plan.child.as_ref().clone(), storage),

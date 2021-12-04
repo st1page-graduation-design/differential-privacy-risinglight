@@ -10,14 +10,15 @@ pub struct PhysicalFilter {
 
 impl PhysicalPlaner {
     pub fn plan_filter(&self, plan: &LogicalFilter) -> Result<PhysicalPlan, PhysicalPlanError> {
-        Ok(PhysicalPlan::Filter(PhysicalFilter {
+        Ok(PhysicalFilter {
             expr: plan.expr.clone(),
             child: self.plan_inner(&plan.child)?.into(),
-        }))
+        }
+        .into())
     }
 }
 
-impl PlanExplainable for PhysicalFilter {
+impl Explain for PhysicalFilter {
     fn explain_inner(&self, level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Filter: expr {:?}", self.expr)?;
         self.child.explain(level + 1, f)

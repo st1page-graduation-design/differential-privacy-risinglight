@@ -23,22 +23,24 @@ pub struct PhysicalValues {
 
 impl PhysicalPlaner {
     pub fn plan_insert(&self, plan: &LogicalInsert) -> Result<PhysicalPlan, PhysicalPlanError> {
-        Ok(PhysicalPlan::Insert(PhysicalInsert {
+        Ok(PhysicalInsert {
             table_ref_id: plan.table_ref_id,
             column_ids: plan.column_ids.clone(),
             child: self.plan_inner(&plan.child)?.into(),
-        }))
+        }
+        .into())
     }
 
     pub fn plan_values(&self, plan: &LogicalValues) -> Result<PhysicalPlan, PhysicalPlanError> {
-        Ok(PhysicalPlan::Values(PhysicalValues {
+        Ok(PhysicalValues {
             column_types: plan.column_types.clone(),
             values: plan.values.clone(),
-        }))
+        }
+        .into())
     }
 }
 
-impl PlanExplainable for PhysicalInsert {
+impl Explain for PhysicalInsert {
     fn explain_inner(&self, level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
@@ -50,7 +52,7 @@ impl PlanExplainable for PhysicalInsert {
     }
 }
 
-impl PlanExplainable for PhysicalValues {
+impl Explain for PhysicalValues {
     fn explain_inner(&self, _level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Values: {} rows", self.values.len())
     }

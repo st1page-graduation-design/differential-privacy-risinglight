@@ -9,13 +9,14 @@ pub struct PhysicalDrop {
 
 impl PhysicalPlaner {
     pub fn plan_drop(&self, plan: &LogicalDrop) -> Result<PhysicalPlan, PhysicalPlanError> {
-        Ok(PhysicalPlan::Drop(PhysicalDrop {
+        Ok(PhysicalDrop {
             object: plan.object.clone(),
-        }))
+        }
+        .into())
     }
 }
 
-impl PlanExplainable for PhysicalDrop {
+impl Explain for PhysicalDrop {
     fn explain_inner(&self, _level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "{:?}", self)
     }

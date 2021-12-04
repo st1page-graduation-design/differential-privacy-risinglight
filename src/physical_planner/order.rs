@@ -10,14 +10,15 @@ pub struct PhysicalOrder {
 
 impl PhysicalPlaner {
     pub fn plan_order(&self, plan: &LogicalOrder) -> Result<PhysicalPlan, PhysicalPlanError> {
-        Ok(PhysicalPlan::Order(PhysicalOrder {
+        Ok(PhysicalOrder {
             comparators: plan.comparators.clone(),
             child: self.plan_inner(&plan.child)?.into(),
-        }))
+        }
+        .into())
     }
 }
 
-impl PlanExplainable for PhysicalOrder {
+impl Explain for PhysicalOrder {
     fn explain_inner(&self, level: usize, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "OrderBy: {:?}", self.comparators)?;
         self.child.explain(level + 1, f)
