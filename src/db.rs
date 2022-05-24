@@ -9,19 +9,22 @@ use tracing::debug;
 use crate::array::{
     ArrayBuilder, ArrayBuilderImpl, Chunk, DataChunk, I32ArrayBuilder, Utf8ArrayBuilder,
 };
-use crate::binder::{BindError, Binder};
+use crate::binder::{BindError, Binder, BoundAggCall, BoundExpr, BoundInputRef};
 use crate::catalog::RootCatalogRef;
 use crate::executor::context::Context;
 use crate::executor::{ExecutorBuilder, ExecutorError};
 use crate::logical_planner::{LogicalPlanError, LogicalPlaner};
 use crate::optimizer::logical_plan_rewriter::{InputRefResolver, PlanRewriter};
-use crate::optimizer::plan_nodes::PlanRef;
+use crate::optimizer::plan_nodes::{
+    LogicalAggregate, LogicalExplain, PhysicalExplain, PhysicalHashAgg, PlanRef,
+};
 use crate::optimizer::Optimizer;
 use crate::parser::{parse, ParserError};
 use crate::storage::{
     InMemoryStorage, SecondaryStorage, SecondaryStorageOptions, Storage, StorageColumnRef,
     StorageImpl, Table,
 };
+use crate::types::DataType;
 
 /// The database instance.
 pub struct Database {
@@ -193,7 +196,52 @@ impl Database {
             debug!("{:#?}", logical_plan);
             let optimized_plan = optimizer.optimize(logical_plan);
             debug!("{:#?}", optimized_plan);
+            let epsilon: f64 = 0.4;
+            let pre_agg = false;
+            let optimized_plan = match pre_agg {
+                true => {
+                    let schema = optimized_plan.schema();
+                    let inpt = |i: usize| -> BoundExpr {
+                        BoundExpr::InputRef(BoundInputRef {
+                            index: i,
+                            return_type: schema[i].datatype().clone(),
+                        })
+                    };
+                    pub use sqlparser::ast::DataType as DataTypeKind;
 
+                    let agg_data_type = DataType {
+                        kind: DataTypeKind::Double,
+                        physical_kind: crate::types::PhysicalDataTypeKind::Float64,
+                        nullable: false,
+                    };
+                    let optimized_plan = Arc::new(PhysicalHashAgg::new(LogicalAggregate::new(
+                        vec![
+                            BoundAggCall {
+                                kind: crate::binder::AggKind::DPSum(epsilon),
+                                args: vec![inpt(2)],
+                                return_type: agg_data_type.clone(),
+                            },
+                            BoundAggCall {
+                                kind: crate::binder::AggKind::DPSum(epsilon),
+                                args: vec![inpt(3)],
+                                return_type: agg_data_type.clone(),
+                            },
+                            BoundAggCall {
+                                kind: crate::binder::AggKind::DPSum(epsilon),
+                                args: vec![inpt(4)],
+                                return_type: agg_data_type.clone(),
+                            },
+                        ],
+                        vec![inpt(0), inpt(1)],
+                        optimized_plan,
+                    )));
+                    optimized_plan
+                }
+                false => optimized_plan,
+            };
+
+            // let optimized_plan =
+            //     Arc::new(PhysicalExplain::new(LogicalExplain::new(optimized_plan)));
             let mut executor_builder = ExecutorBuilder::new(context.clone(), self.storage.clone());
             let executor = executor_builder.build(optimized_plan);
 
