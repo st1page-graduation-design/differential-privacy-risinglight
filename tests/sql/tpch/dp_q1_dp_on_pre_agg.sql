@@ -5,7 +5,7 @@ select
     sum(sum_base_price),
     sum(sum_disc_price),
     sum(sum_charge),
-    sum(count_order),
+    sum(count_order)
 from(
     select
         l_returnflag,
