@@ -5,11 +5,15 @@ use crate::array::ArrayImpl;
 use crate::types::DataValue;
 
 mod count;
+mod dp_count;
+mod dp_sum;
 mod min_max;
 mod rowcount;
 mod sum;
 
 pub use count::*;
+pub use dp_count::*;
+pub use dp_sum::*;
 pub use min_max::*;
 pub use rowcount::*;
 pub use sum::*;

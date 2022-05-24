@@ -84,6 +84,8 @@ fn create_agg_state(agg_call: &BoundAggCall) -> Box<dyn AggregationState> {
             true,
         )),
         AggKind::Sum => Box::new(SumAggregationState::new(agg_call.return_type.kind())),
+        AggKind::DPCount(epsilon) => Box::new(DPCountAggregationState::new(epsilon)),
+        AggKind::DPSum(epsilon) => Box::new(DPSumAggregationState::new(epsilon)),
         _ => panic!("Unsupported aggregate kind"),
     }
 }

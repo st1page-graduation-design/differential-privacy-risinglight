@@ -81,7 +81,6 @@ impl Binder {
         // TODO: Support scalar function
         let mut args = Vec::new();
         for arg in &func.args {
-            dbg!(arg.clone());
             let arg = match &arg {
                 FunctionArg::Named { arg, .. } => arg,
                 FunctionArg::Unnamed(arg) => arg,
@@ -146,7 +145,7 @@ impl Binder {
                     };
                     (
                         AggKind::DPCount(epsilon),
-                        Some(DataType::new(DataTypeKind::Int(None), false)),
+                        Some(DataType::new(DataTypeKind::Float(None), false)),
                     )
                 }
             }
@@ -173,7 +172,10 @@ impl Binder {
                         ));
                     }
                 };
-                (AggKind::DPSum(epsilon), args[0].return_type())
+                (
+                    AggKind::DPSum(epsilon),
+                    Some(DataType::new(DataTypeKind::Float(None), false)),
+                )
             }
             "max" => (AggKind::Max, args[0].return_type()),
             "min" => (AggKind::Min, args[0].return_type()),
