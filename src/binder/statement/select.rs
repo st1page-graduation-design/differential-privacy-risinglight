@@ -114,7 +114,6 @@ impl Binder {
         if let Some(table_ref) = &mut from_table {
             self.bind_column_ids(table_ref);
         }
-
         Ok(Box::new(BoundSelect {
             select_list,
             from_table,

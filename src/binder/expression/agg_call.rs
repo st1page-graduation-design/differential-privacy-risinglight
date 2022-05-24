@@ -19,22 +19,29 @@ pub enum AggKind {
     Min,
     Sum,
     Count,
+    DPCount(f64),
+    DPSum(f64),
 }
 
 impl std::fmt::Display for AggKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         use AggKind::*;
-        write!(
-            f,
-            "{}",
-            match self {
-                Avg => "avg",
-                RowCount | Count => "count",
-                Max => "max",
-                Min => "min",
-                Sum => "sum",
-            }
-        )
+        match self {
+            DPCount(epsilon) => write!(f, "dp_count(epsilon={})", epsilon),
+            DPSum(epsilon) => write!(f, "dp_sum(epsilon={})", epsilon),
+            _ => write!(
+                f,
+                "{}",
+                match self {
+                    Avg => "avg",
+                    RowCount | Count => "count",
+                    Max => "max",
+                    Min => "min",
+                    Sum => "sum",
+                    _ => unreachable!(),
+                }
+            ),
+        }
     }
 }
 
@@ -74,6 +81,7 @@ impl Binder {
         // TODO: Support scalar function
         let mut args = Vec::new();
         for arg in &func.args {
+            dbg!(arg.clone());
             let arg = match &arg {
                 FunctionArg::Named { arg, .. } => arg,
                 FunctionArg::Unnamed(arg) => arg,
@@ -107,6 +115,65 @@ impl Binder {
                         Some(DataType::new(DataTypeKind::Int(None), false)),
                     )
                 }
+            }
+            "dp_count" => {
+                if args.is_empty() {
+                    return Err(BindError::InvalidExpression(
+                        "Unsupported dp_count(*), please use dp_count(1, epsilon)".to_string(),
+                    ));
+                } else {
+                    if args.len() != 2 {
+                        return Err(BindError::InvalidExpression(
+                            "dp_count usage: dp_count(col, epsilon)".to_string(),
+                        ));
+                    }
+                    let epsilon = args.pop().unwrap();
+                    let epsilon: f64 = match epsilon {
+                        BoundExpr::Constant(v) => match v {
+                            DataValue::Int32(x) => x.into(),
+                            DataValue::Float64(x) => x.into(),
+                            _ => {
+                                return Err(BindError::InvalidExpression(
+                                    "dp_count usage: dp_count(col, epsilon)".to_string(),
+                                ));
+                            }
+                        },
+                        _ => {
+                            return Err(BindError::InvalidExpression(
+                                "dp_count usage: dp_count(col, epsilon)".to_string(),
+                            ));
+                        }
+                    };
+                    (
+                        AggKind::DPCount(epsilon),
+                        Some(DataType::new(DataTypeKind::Int(None), false)),
+                    )
+                }
+            }
+            "dp_sum" => {
+                if args.len() != 2 {
+                    return Err(BindError::InvalidExpression(
+                        "dp_sum usage: dp_sum(col, epsilon)".to_string(),
+                    ));
+                }
+                let epsilon = args.pop().unwrap();
+                let epsilon: f64 = match epsilon {
+                    BoundExpr::Constant(v) => match v {
+                        DataValue::Int32(x) => x.into(),
+                        DataValue::Float64(x) => x.into(),
+                        _ => {
+                            return Err(BindError::InvalidExpression(
+                                "dp_sum usage: dp_count(col, epsilon)".to_string(),
+                            ));
+                        }
+                    },
+                    _ => {
+                        return Err(BindError::InvalidExpression(
+                            "dp_sum usage: dp_count(col, epsilon)".to_string(),
+                        ));
+                    }
+                };
+                (AggKind::DPSum(epsilon), args[0].return_type())
             }
             "max" => (AggKind::Max, args[0].return_type()),
             "min" => (AggKind::Min, args[0].return_type()),
