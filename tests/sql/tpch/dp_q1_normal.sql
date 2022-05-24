@@ -1,9 +1,9 @@
 explain select
     l_returnflag,
     l_linestatus,
-    dp_sum(l_quantity                                      , 0.5) as sum_qty,
-    dp_sum(l_extendedprice * (1 - l_discount) * (1 + l_tax), 0.5) as sum_charge,
-    dp_count(1                                             , 0.5) as count_order
+    sum(l_quantity                                      ) as sum_qty,
+    sum(l_extendedprice * (1 - l_discount) * (1 + l_tax)) as sum_charge,
+    count(1                                             ) as count_order
 from
     lineitem
 where
@@ -26,9 +26,9 @@ PhysicalOrder:
     PhysicalHashAgg:
         InputRef #1
         InputRef #2
-        dp_sum(epsilon=0.5)(InputRef #3) -> FLOAT
-        dp_sum(epsilon=0.5)(((InputRef #4 * (1 - InputRef #5)) * (1 + InputRef #6))) -> FLOAT
-        dp_count(epsilon=0.5)(1) -> FLOAT
+        sum(InputRef #3) -> NUMERIC(15,2)
+        sum(((InputRef #4 * (1 - InputRef #5)) * (1 + InputRef #6))) -> NUMERIC(15,2) (null)
+        count(1) -> INT
       PhysicalTableScan:
           table #9,
           columns [10, 8, 9, 4, 5, 6, 7],

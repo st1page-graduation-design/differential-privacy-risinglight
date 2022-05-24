@@ -197,8 +197,8 @@ impl Database {
             let optimized_plan = optimizer.optimize(logical_plan);
             debug!("{:#?}", optimized_plan);
             let epsilon: f64 = 0.4;
-            let pre_agg = false;
-            let optimized_plan = match pre_agg {
+            let hardcode_dp_tpch_q1_pre_agg = false;
+            let optimized_plan = match hardcode_dp_tpch_q1_pre_agg {
                 true => {
                     let schema = optimized_plan.schema();
                     let inpt = |i: usize| -> BoundExpr {

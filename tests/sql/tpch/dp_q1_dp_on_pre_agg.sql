@@ -28,12 +28,12 @@ group by
     pre_agg.l_returnflag,
     pre_agg.l_linestatus;
 
-PhysicalHashAgg:                                                                                                                             
+ PhysicalHashAgg:                                                                                                                             
      InputRef #0                                                                                                                              
      InputRef #1                                                                                                                              
-     dp_sum(epsilon=0.4)(InputRef #2) -> NUMERIC(15,2)                                                                                        
-     dp_sum(epsilon=0.4)(InputRef #3) -> NUMERIC(15,2)                                                                                        
-     dp_sum(epsilon=0.4)(InputRef #4) -> NUMERIC(15,2)                                                                                        
+     dp_sum(epsilon=0.4)(InputRef #2) -> DOUBLE                                                                                               
+     dp_sum(epsilon=0.4)(InputRef #3) -> DOUBLE                                                                                               
+     dp_sum(epsilon=0.4)(InputRef #4) -> DOUBLE                                                                                               
    PhysicalProjection:                                                                                                                        
        InputRef #0                                                                                                                            
        InputRef #1                                                                                                                            
@@ -70,4 +70,4 @@ PhysicalHashAgg:
              columns [0],                                                                                                                     
              with_row_handler: false,                                                                                                         
              is_sorted: false,                                                                                                                
-             expr: None        
+             expr: None 
