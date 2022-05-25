@@ -15,9 +15,7 @@ use crate::executor::context::Context;
 use crate::executor::{ExecutorBuilder, ExecutorError};
 use crate::logical_planner::{LogicalPlanError, LogicalPlaner};
 use crate::optimizer::logical_plan_rewriter::{InputRefResolver, PlanRewriter};
-use crate::optimizer::plan_nodes::{
-    LogicalAggregate, LogicalExplain, PhysicalExplain, PhysicalHashAgg, PlanRef,
-};
+use crate::optimizer::plan_nodes::{LogicalAggregate, PhysicalHashAgg, PlanRef};
 use crate::optimizer::Optimizer;
 use crate::parser::{parse, ParserError};
 use crate::storage::{
@@ -196,8 +194,8 @@ impl Database {
             debug!("{:#?}", logical_plan);
             let optimized_plan = optimizer.optimize(logical_plan);
             debug!("{:#?}", optimized_plan);
-            let epsilon: f64 = 0.4;
-            let hardcode_dp_tpch_q1_pre_agg = false;
+            let epsilon: f64 = 0.1;
+            let hardcode_dp_tpch_q1_pre_agg = true;
             let optimized_plan = match hardcode_dp_tpch_q1_pre_agg {
                 true => {
                     let schema = optimized_plan.schema();
@@ -239,7 +237,14 @@ impl Database {
                 }
                 false => optimized_plan,
             };
-
+            // +--------------+--------------+----------+---------------------+-------------+
+            // | l_returnflag | l_linestatus | sum_qty  | sum_charge          | count_order |
+            // +--------------+--------------+----------+---------------------+-------------+
+            // | A            | F            | 37734107 | 55909065222.827692  | 1478493     |
+            // | N            | F            | 991417   | 1469649223.194375   | 38854       |
+            // | N            | O            | 75283683 | 111560462484.162066 | 2952204     |
+            // | R            | F            | 37719753 | 55889619119.831932  | 1478870     |
+            // +--------------+--------------+----------+---------------------+-------------+
             // let optimized_plan =
             //     Arc::new(PhysicalExplain::new(LogicalExplain::new(optimized_plan)));
             let mut executor_builder = ExecutorBuilder::new(context.clone(), self.storage.clone());
